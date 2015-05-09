@@ -1,6 +1,7 @@
 import Graphics.Element exposing (show)
 import Http
 import Json.Decode as Json exposing ((:=), string)
+import Signal exposing ((<~))
 import Html exposing (Html)
 import Task exposing (Task, andThen)
 import Time exposing (second)
@@ -13,14 +14,12 @@ commentsDecoder =
     in 
       Json.list comment
          
-main = Signal.map show mb.signal
+main = show <~ mb.signal
 
 port fetchComments : Signal (Task Http.Error ())
 port fetchComments =
-    Signal.sampleOn
-      (Time.every <| 3 * second)
-      (Signal.constant <|
-        Http.get commentsDecoder ("/api/comments.json") `andThen` asyncLoopback)
+    (\_ -> Http.get commentsDecoder ("/api/comments.json") `andThen` asyncLoopback)
+    <~ (Time.every <| 3 * second)
 
 mb : Signal.Mailbox (List Comment)
 mb = Signal.mailbox []

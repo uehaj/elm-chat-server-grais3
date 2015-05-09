@@ -3703,7 +3703,7 @@ Elm.Main.make = function (_elm) {
       mb.address,
       comments);
    };
-   var main = A2($Signal.map,
+   var main = A2($Signal._op["<~"],
    $Graphics$Element.show,
    mb.signal);
    var commentsDecoder = function () {
@@ -3722,13 +3722,17 @@ Elm.Main.make = function (_elm) {
       return $Json$Decode.list(comment);
    }();
    var fetchComments = Elm.Native.Task.make(_elm).performSignal("fetchComments",
-   A2($Signal.sampleOn,
-   $Time.every(3 * $Time.second),
-   $Signal.constant(A2($Task.andThen,
-   A2($Http.get,
-   commentsDecoder,
-   "/api/comments.json"),
-   asyncLoopback))));
+   A2($Signal._op["<~"],
+   function (_v0) {
+      return function () {
+         return A2($Task.andThen,
+         A2($Http.get,
+         commentsDecoder,
+         "/api/comments.json"),
+         asyncLoopback);
+      }();
+   },
+   $Time.every(3 * $Time.second)));
    _elm.Main.values = {_op: _op
                       ,commentsDecoder: commentsDecoder
                       ,main: main

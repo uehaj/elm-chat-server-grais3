@@ -1,0 +1,212 @@
+import groovyx.net.http.RESTClient
+import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.client.methods.HttpPut
+import org.apache.http.entity.FileEntity
+
+buildscript {
+    ext {
+        grailsVersion = project.grailsVersion
+    }
+    repositories {
+        mavenLocal()
+        maven { url "https://repo.grails.org/grails/core" }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:$grailsVersion"
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle:2.1.1'
+        classpath 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.2'
+        classpath 'com.moowork.gradle:gradle-node-plugin:0.9'
+    }
+}
+
+plugins {
+    id "io.spring.dependency-management" version "0.4.0.RELEASE"
+}
+
+version "0.1"
+group "chat.server"
+
+apply plugin: "spring-boot"
+apply plugin: "war"
+apply plugin: "asset-pipeline"
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: "org.grails.grails-web"
+apply plugin: "org.grails.grails-gsp"
+apply plugin: "com.moowork.node"
+
+ext {
+    grailsVersion = project.grailsVersion
+    gradleWrapperVersion = project.gradleWrapperVersion
+}
+
+assets {
+    minifyJs = true
+    minifyCss = true
+}
+
+// node {
+//     version = '0.12.2'
+//     npmVersion = '2.7.5'
+//     download = true
+// }
+
+repositories {
+    mavenLocal()
+    maven { url "https://repo.grails.org/grails/core" }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.grails:grails-bom:$grailsVersion"
+    }
+    applyMavenExclusions false
+}
+
+dependencies {
+    compile "org.springframework.boot:spring-boot-starter-logging"
+    compile "org.springframework.boot:spring-boot-starter-actuator"
+    compile "org.springframework.boot:spring-boot-autoconfigure"
+    compile "org.springframework.boot:spring-boot-starter-tomcat"
+    compile "org.grails:grails-dependencies"
+    compile "org.grails:grails-web-boot"
+
+    compile "org.grails.plugins:hibernate"
+    compile "org.grails.plugins:cache"
+    compile "org.hibernate:hibernate-ehcache"
+
+    runtime "org.grails.plugins:asset-pipeline"
+    runtime "org.grails.plugins:scaffolding"
+
+    testCompile "org.grails:grails-plugin-testing"
+    testCompile "org.grails.plugins:geb"
+
+    // Note: It is recommended to update to a more robust driver (Chrome, Firefox etc.)
+    testRuntime 'org.seleniumhq.selenium:selenium-htmlunit-driver:2.44.0'
+
+    console "org.grails:grails-console"
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = gradleWrapperVersion
+}
+
+/**
+ * Uploading a source tarball with the compiled jar and an empty maven build to make the Java buildpack happy
+ */
+task emptyPom {
+    outputs.file('build/pom.xml')
+    doLast {
+        new File('build/pom.xml') << """
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>chat.server</groupId>
+  <artifactId>placeholder</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0</version>
+  <name>Chat Server</name>
+  <build>
+    <finalName>placeholder</finalName>
+  </build>
+</project>
+"""
+    }
+}
+
+task herokuSources(type: Tar, dependsOn: [emptyPom, bootRepackage]) {
+    description = "Package built application into Heroku sources for faster deployment"
+    group = "distribution"
+    appendix = "heroku"
+    compression = Compression.GZIP
+    from jar.archivePath
+    from 'Procfile'
+    from 'system.properties'
+    from 'build/pom.xml'
+}
+
+// Documentation at https://devcenter.heroku.com/articles/build-and-release-using-the-api
+task deployToHeroku(dependsOn: herokuSources) {
+    description = 'Deploy the application to Heroku via the Platform API REST services'
+    group = "distribution"
+    doLast {
+        RESTClient heroku = new RESTClient("https://api.heroku.com/apps/${System.getenv("HEROKU_APP_NAME")}/")
+        heroku.headers['Authorization'] = "Bearer ${System.getenv('HEROKU_AUTH_TOKEN')}"
+        heroku.headers['Accept'] = 'application/vnd.heroku+json; version=3'
+
+        // upload sources
+        def sources = heroku.post(path: 'sources')
+        def put_url = sources.data.source_blob.put_url
+        def get_url = sources.data.source_blob.get_url
+
+        // upload sources, Heroku/AWS is very picky about the headers sent, so we need to use this way. For example, Content-Type must not be present
+        logger.info("Uploading ${herokuSources.archivePath} to ${put_url}")
+        def res = new DefaultHttpClient().execute(new HttpPut(URI: new URI(put_url), entity: new FileEntity(herokuSources.archivePath)))
+        if (res.statusLine.statusCode > 399) {
+            throw new IOException(res.statusLine.reasonPhrase)
+        }
+
+        // start the build
+        logger.info("Building ${get_url}")
+        heroku.post(path: 'builds', requestContentType: 'application/json',
+            body: ['source_blob': ['url':get_url, 'version': "git rev-parse HEAD".execute().text.trim() ]]
+        )
+    }
+    onlyIf { System.getenv('HEROKU_AUTH_TOKEN') && System.getenv('HEROKU_APP_NAME') }
+}
+
+// task npmCacheConfig(type: NpmTask) {
+//     description = "Configure the NPM cache"
+//     def npmCacheDir = "${gradle.getGradleUserHomeDir()}/caches/npm"
+//     outputs.files file(npmCacheDir)
+//     args = [ 'config', 'set', 'cache', npmCacheDir ]
+// }
+
+// task npmPackages(type: NpmTask, dependsOn: npmCacheConfig) {
+//     description = "Install Node.js packages"
+//     args = [ 'install' ]
+//     inputs.files file('package.json')
+//     outputs.files file('node_modules')
+// }
+
+// task bowerInstall(type: NodeTask) {
+//     script = file('node_modules/bower/bin/bower')
+//     args = ["--config.storage.cache=${gradle.getGradleUserHomeDir()}/caches/bower/cache",
+//             "--config.storage.packages=${gradle.getGradleUserHomeDir()}/caches/bower/packages",
+//             "--config.storage.registry=${gradle.getGradleUserHomeDir()}/caches/bower/registry",
+//             'install']
+//     inputs.files file('bower.json')
+//     outputs.files file('bower_components')
+//     dependsOn npmPackages
+// }
+
+// task bowerSyncJavascript(type: Sync) {
+//     from 'bower_components'
+//     into "grails-app/assets/javascripts/bower_components"
+//     exclude '**/*.min.js'
+//     exclude '**/angular*/index.js'
+//     exclude '**/angular*/ng*.js'
+//     include 'jquery/dist/jquery.js'
+//     include 'angular*/**/*.js'
+//     dependsOn bowerInstall
+// }
+
+// task bowerSyncStylesheets(type: Sync) {
+//     from 'bower_components'
+//     into "grails-app/assets/stylesheets/bower_components"
+//     include 'angular*/**/*.css'
+//     include 'animate.css/animate.css'
+//     dependsOn bowerInstall
+// }
+
+// task bowerPackages() {
+//     dependsOn bowerSyncJavascript, bowerSyncStylesheets
+// }
+
+// processResources.dependsOn bowerPackages
+// assetCompile.dependsOn bowerPackages
+
+// clean.delete << file('grails-app/assets/javascripts/bower_components')
+// clean.delete << file('grails-app/assets/stylesheets/bower_components')
+// clean.delete << file('node_modules')
+// clean.delete << file('bower_components')

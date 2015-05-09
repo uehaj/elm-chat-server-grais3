@@ -3690,11 +3690,13 @@ Elm.Main.make = function (_elm) {
    _U = _N.Utils.make(_elm),
    _L = _N.List.make(_elm),
    $moduleName = "Main",
+   $Basics = Elm.Basics.make(_elm),
    $Graphics$Element = Elm.Graphics.Element.make(_elm),
    $Http = Elm.Http.make(_elm),
    $Json$Decode = Elm.Json.Decode.make(_elm),
    $Signal = Elm.Signal.make(_elm),
-   $Task = Elm.Task.make(_elm);
+   $Task = Elm.Task.make(_elm),
+   $Time = Elm.Time.make(_elm);
    var mb = $Signal.mailbox(_L.fromArray([]));
    var asyncLoopback = function (comments) {
       return A2($Signal.send,
@@ -3719,11 +3721,14 @@ Elm.Main.make = function (_elm) {
       $Json$Decode.string));
       return $Json$Decode.list(comment);
    }();
-   var fetchComments = Elm.Native.Task.make(_elm).perform(A2($Task.andThen,
+   var fetchComments = Elm.Native.Task.make(_elm).performSignal("fetchComments",
+   A2($Signal.sampleOn,
+   $Time.every(3 * $Time.second),
+   $Signal.constant(A2($Task.andThen,
    A2($Http.get,
    commentsDecoder,
    "/api/comments.json"),
-   asyncLoopback));
+   asyncLoopback))));
    _elm.Main.values = {_op: _op
                       ,commentsDecoder: commentsDecoder
                       ,main: main

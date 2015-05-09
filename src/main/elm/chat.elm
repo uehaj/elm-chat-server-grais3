@@ -3,6 +3,9 @@ import Http
 import Json.Decode as Json exposing ((:=), string)
 import Html exposing (Html)
 import Task exposing (Task, andThen)
+import Time exposing (second)
+
+type alias Comment = (String, String)
 
 commentsDecoder =
     let comment = 
@@ -12,13 +15,16 @@ commentsDecoder =
          
 main = Signal.map show mb.signal
 
-port fetchComments : Task Http.Error ()
+port fetchComments : Signal (Task Http.Error ())
 port fetchComments =
-    Http.get commentsDecoder ("/api/comments.json") `andThen` asyncLoopback
+    Signal.sampleOn
+      (Time.every <| 3 * second)
+      (Signal.constant <|
+        Http.get commentsDecoder ("/api/comments.json") `andThen` asyncLoopback)
 
-mb : Signal.Mailbox (List (String, String))
+mb : Signal.Mailbox (List Comment)
 mb = Signal.mailbox []
 
-asyncLoopback : List (String, String) -> Task Http.Error ()
+asyncLoopback : List Comment -> Task Http.Error ()
 asyncLoopback comments =
     Signal.send mb.address comments

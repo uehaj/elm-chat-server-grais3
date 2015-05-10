@@ -15,7 +15,7 @@ import StartApp
 
 setup =
     let
-        urlBase = "http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/"
+        urlBase = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/"
         css = urlBase ++ "css/bootstrap.min.css"
         theme = urlBase ++ "css/bootstrap-theme.min.css"
         js = urlBase ++ "js/bootstrap.min.js"

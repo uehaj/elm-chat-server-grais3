@@ -13,6 +13,7 @@ import StartApp
 
 (:~) a b = attribute a b
 
+setup : List Html
 setup =
     let
         urlBase = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/"
@@ -29,6 +30,7 @@ setup =
         , includeJs js
         ]
 
+messageLog : List (String, String) -> Html
 messageLog msgs =
     let toTable = List.map (\(name, msg) -> tr[][td [][text name], td [][text msg]] )
     in table [ "width" :~ "100%" ]
@@ -36,6 +38,7 @@ messageLog msgs =
         , tbody [] <| toTable msgs
         ]
 
+view : List Message -> Html
 view msgs =
    div [ "class" :~ "container" ]
      (setup ++
@@ -45,7 +48,8 @@ view msgs =
          [ colXs_ 8
             [ messageLog msgs
             , Html.form [ "class" :~ "inline"]
-                        [ input [ "placeholder" :~ "your name" ] []
+                        [ input [ "placeholder" :~ "your name"
+                                , "size" :~ "8" ] []
                         , input [ "placeholder" :~ "something to say"
                                 , "size" :~ "40" ] []
                         , button [ "class" :~ "btn btn-primary"] [ text "abc" ]
@@ -55,24 +59,50 @@ view msgs =
          ]
        ])
 
-type alias Comment = (String, String)
+type alias Message = (String, String)
 
-commentsDecoder =
-    let comment = 
-      Json.object2 (,) ("saying" := string) ("dateCreated" := string)
+authorDecoder : Json.Decoder Int
+authorDecoder =
+    Json.object1 identity ("id" := Json.int)
+
+messagesDecoder : Json.Decoder (List (Int, String))
+messagesDecoder =
+    let message = 
+      Json.object2 (,) ("author" := authorDecoder) ("message" := string)
     in 
-      Json.list comment
-         
+      Json.list message
+
+fetchUserNames : List (Int, String) -> Task Http.Error (List String)
+fetchUserNames userNames =
+    let
+      userIds = List.map fst userNames
+      userNameDecoder = Json.object1 identity ("name" := string)
+    in
+      List.map (\userId -> (Http.get userNameDecoder ("/api/users/"++toString(userId)++".json"))) userIds |> Task.sequence
+
+main : Signal Html
 main = view <~ mb.signal
 
-port fetchComments : Signal (Task Http.Error ())
-port fetchComments =
-    (\_ -> Http.get commentsDecoder ("/api/comments.json") `andThen` asyncLoopback)
+getMessages : Task Http.Error (List (Int, String))
+getMessages = Http.get messagesDecoder ("/api/messages.json")
+
+composeMessageLogs : List String -> List (Int, String) -> Task Http.Error (List (String, String))
+composeMessageLogs userNames msgList = Task.succeed <| List.map2 (,) (List.map snd msgList) userNames
+
+port fetchMessages : Signal (Task Http.Error ())
+port fetchMessages =
+    (\_ -> (getMessages
+      `andThen` (\msgList ->
+      fetchUserNames msgList
+      `andThen` (\userNames ->
+      composeMessageLogs userNames msgList)))
+      `andThen`
+      asyncLoopback)
     <~ (Time.every <| 3 * second)
 
-mb : Signal.Mailbox (List Comment)
+mb : Signal.Mailbox (List Message)
 mb = Signal.mailbox []
 
-asyncLoopback : List Comment -> Task Http.Error ()
-asyncLoopback comments =
-    Signal.send mb.address comments
+asyncLoopback : List Message -> Task Http.Error ()
+asyncLoopback messages =
+    Signal.send mb.address messages

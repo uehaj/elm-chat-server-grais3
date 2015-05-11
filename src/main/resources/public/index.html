@@ -9668,34 +9668,86 @@ Elm.Main.make = function (_elm) {
    $Task = Elm.Task.make(_elm),
    $Time = Elm.Time.make(_elm);
    var mb = $Signal.mailbox(_L.fromArray([]));
-   var asyncLoopback = function (comments) {
+   var asyncLoopback = function (messages) {
       return A2($Signal.send,
       mb.address,
-      comments);
+      messages);
    };
-   var commentsDecoder = function () {
-      var comment = A3($Json$Decode.object2,
+   var composeMessageLogs = F2(function (userNames,
+   msgList) {
+      return $Task.succeed(A3($List.map2,
+      F2(function (v0,v1) {
+         return {ctor: "_Tuple2"
+                ,_0: v0
+                ,_1: v1};
+      }),
+      A2($List.map,
+      $Basics.snd,
+      msgList),
+      userNames));
+   });
+   var fetchUserNames = function (userNames) {
+      return function () {
+         var userNameDecoder = A2($Json$Decode.object1,
+         $Basics.identity,
+         A2($Json$Decode._op[":="],
+         "name",
+         $Json$Decode.string));
+         var userIds = A2($List.map,
+         $Basics.fst,
+         userNames);
+         return $Task.sequence(A2($List.map,
+         function (userId) {
+            return A2($Http.get,
+            userNameDecoder,
+            A2($Basics._op["++"],
+            "/api/users/",
+            A2($Basics._op["++"],
+            $Basics.toString(userId),
+            ".json")));
+         },
+         userIds));
+      }();
+   };
+   var authorDecoder = A2($Json$Decode.object1,
+   $Basics.identity,
+   A2($Json$Decode._op[":="],
+   "id",
+   $Json$Decode.$int));
+   var messagesDecoder = function () {
+      var message = A3($Json$Decode.object2,
       F2(function (v0,v1) {
          return {ctor: "_Tuple2"
                 ,_0: v0
                 ,_1: v1};
       }),
       A2($Json$Decode._op[":="],
-      "saying",
-      $Json$Decode.string),
+      "author",
+      authorDecoder),
       A2($Json$Decode._op[":="],
-      "dateCreated",
+      "message",
       $Json$Decode.string));
-      return $Json$Decode.list(comment);
+      return $Json$Decode.list(message);
    }();
-   var fetchComments = Elm.Native.Task.make(_elm).performSignal("fetchComments",
+   var getMessages = A2($Http.get,
+   messagesDecoder,
+   "/api/messages.json");
+   var fetchMessages = Elm.Native.Task.make(_elm).performSignal("fetchMessages",
    A2($Signal._op["<~"],
    function (_v0) {
       return function () {
          return A2($Task.andThen,
-         A2($Http.get,
-         commentsDecoder,
-         "/api/comments.json"),
+         A2($Task.andThen,
+         getMessages,
+         function (msgList) {
+            return A2($Task.andThen,
+            fetchUserNames(msgList),
+            function (userNames) {
+               return A2(composeMessageLogs,
+               userNames,
+               msgList);
+            });
+         }),
          asyncLoopback);
       }();
    },
@@ -9756,7 +9808,7 @@ Elm.Main.make = function (_elm) {
                                  _L.fromArray([]),
                                  _L.fromArray([$Html.text(_v2._1)]))]));}
                _U.badCase($moduleName,
-               "on line 33, column 45 to 84");
+               "on line 35, column 45 to 84");
             }();
          });
          return A2($Html.table,
@@ -9799,8 +9851,11 @@ Elm.Main.make = function (_elm) {
                                                                    "inline")]),
                                                                    _L.fromArray([A2($Html.input,
                                                                                 _L.fromArray([A2(_op[":~"],
-                                                                                "placeholder",
-                                                                                "your name")]),
+                                                                                             "placeholder",
+                                                                                             "your name")
+                                                                                             ,A2(_op[":~"],
+                                                                                             "size",
+                                                                                             "8")]),
                                                                                 _L.fromArray([]))
                                                                                 ,A2($Html.input,
                                                                                 _L.fromArray([A2(_op[":~"],
@@ -9828,8 +9883,12 @@ Elm.Main.make = function (_elm) {
                       ,setup: setup
                       ,messageLog: messageLog
                       ,view: view
-                      ,commentsDecoder: commentsDecoder
+                      ,authorDecoder: authorDecoder
+                      ,messagesDecoder: messagesDecoder
+                      ,fetchUserNames: fetchUserNames
                       ,main: main
+                      ,getMessages: getMessages
+                      ,composeMessageLogs: composeMessageLogs
                       ,mb: mb
                       ,asyncLoopback: asyncLoopback};
    return _elm.Main.values;

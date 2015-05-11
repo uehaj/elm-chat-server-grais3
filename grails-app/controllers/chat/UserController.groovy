@@ -4,91 +4,91 @@ import static org.springframework.http.HttpStatus.*
 import grails.transaction.Transactional
 
 @Transactional(readOnly = true)
-class CommentController {
+class UserController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
-        respond Comment.list(params), model:[commentCount: Comment.count()]
+        respond User.list(params), model:[userCount: User.count()]
     }
 
-    def show(Comment comment) {
-        respond comment
+    def show(User user) {
+        respond user
     }
 
     def create() {
-        respond new Comment(params)
+        respond new User(params)
     }
 
     @Transactional
-    def save(Comment comment) {
-        if (comment == null) {
+    def save(User user) {
+        if (user == null) {
             transactionStatus.setRollbackOnly()
             notFound()
             return
         }
 
-        if (comment.hasErrors()) {
+        if (user.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond comment.errors, view:'create'
+            respond user.errors, view:'create'
             return
         }
 
-        comment.save flush:true
+        user.save flush:true
 
         request.withFormat {
             form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'comment.label', default: 'Comment'), comment.id])
-                redirect comment
+                flash.message = message(code: 'default.created.message', args: [message(code: 'user.label', default: 'User'), user.id])
+                redirect user
             }
-            '*' { respond comment, [status: CREATED] }
+            '*' { respond user, [status: CREATED] }
         }
     }
 
-    def edit(Comment comment) {
-        respond comment
+    def edit(User user) {
+        respond user
     }
 
     @Transactional
-    def update(Comment comment) {
-        if (comment == null) {
+    def update(User user) {
+        if (user == null) {
             transactionStatus.setRollbackOnly()
             notFound()
             return
         }
 
-        if (comment.hasErrors()) {
+        if (user.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond comment.errors, view:'edit'
+            respond user.errors, view:'edit'
             return
         }
 
-        comment.save flush:true
+        user.save flush:true
 
         request.withFormat {
             form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'comment.label', default: 'Comment'), comment.id])
-                redirect comment
+                flash.message = message(code: 'default.updated.message', args: [message(code: 'user.label', default: 'User'), user.id])
+                redirect user
             }
-            '*'{ respond comment, [status: OK] }
+            '*'{ respond user, [status: OK] }
         }
     }
 
     @Transactional
-    def delete(Comment comment) {
+    def delete(User user) {
 
-        if (comment == null) {
+        if (user == null) {
             transactionStatus.setRollbackOnly()
             notFound()
             return
         }
 
-        comment.delete flush:true
+        user.delete flush:true
 
         request.withFormat {
             form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'comment.label', default: 'Comment'), comment.id])
+                flash.message = message(code: 'default.deleted.message', args: [message(code: 'user.label', default: 'User'), user.id])
                 redirect action:"index", method:"GET"
             }
             '*'{ render status: NO_CONTENT }
@@ -98,7 +98,7 @@ class CommentController {
     protected void notFound() {
         request.withFormat {
             form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'comment.label', default: 'Comment'), params.id])
+                flash.message = message(code: 'default.not.found.message', args: [message(code: 'user.label', default: 'User'), params.id])
                 redirect action: "index", method: "GET"
             }
             '*'{ render status: NOT_FOUND }

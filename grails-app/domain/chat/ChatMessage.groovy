@@ -1,11 +1,13 @@
 package chat
 import grails.rest.*
 
-class Comment {
+class ChatMessage {
     Date dateCreated
-    String saying
+    User author
+    String message
 
     static constraints = {
-        saying notNull:false
+        author()
+        message()
     }
 }

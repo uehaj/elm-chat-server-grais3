@@ -9746,7 +9746,7 @@ Elm.Main.make = function (_elm) {
                       url)]),
          _L.fromArray([]));
       };
-      var jQueryUrl = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js";
+      var jQuery = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js";
       var urlBase = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/";
       var css = A2($Basics._op["++"],
       urlBase,
@@ -9759,7 +9759,7 @@ Elm.Main.make = function (_elm) {
       "js/bootstrap.min.js");
       return _L.fromArray([includeCss(css)
                           ,includeCss(theme)
-                          ,includeJs(jQueryUrl)
+                          ,includeJs(jQuery)
                           ,includeJs(js)]);
    }();
    _op[":~"] = F2(function (a,b) {
@@ -9859,18 +9859,18 @@ Elm.Main.make = function (_elm) {
    function (_v4) {
       return function () {
          return A2($Task.andThen,
-         A2($Task.andThen,
          getChatMessages,
          function (chatMessages) {
             return A2($Task.andThen,
             getUserNames(chatMessages),
             function (userNames) {
-               return A2(composeLogLines,
+               return A2($Task.andThen,
+               A2(composeLogLines,
                userNames,
-               chatMessages);
+               chatMessages),
+               $Signal.send(mb.address));
             });
-         }),
-         $Signal.send(mb.address));
+         });
       }();
    },
    $Time.every(3 * $Time.second)));

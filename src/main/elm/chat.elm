@@ -25,13 +25,13 @@ setup =
         css = urlBase ++ "css/bootstrap.min.css"
         theme = urlBase ++ "css/bootstrap-theme.min.css"
         js = urlBase ++ "js/bootstrap.min.js"
-        jQueryUrl = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"
+        jQuery = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"
         includeCss url = node "link" [ attribute "rel" "stylesheet", attribute "href" url] []
         includeJs url = node "script" [ attribute "src" url ] []
     in
         [ includeCss css
         , includeCss theme
-        , includeJs jQueryUrl
+        , includeJs jQuery
         , includeJs js
         ]
 
@@ -90,11 +90,12 @@ composeLogLines userNames msgList =
 
 port asyncFetchChatMessagesTask : Signal (Task Http.Error ())
 port asyncFetchChatMessagesTask =
-    (\_ -> (getChatMessages
-      `andThen` (\chatMessages ->
+    (\_ ->
+      getChatMessages
+      `andThen` \chatMessages ->
       getUserNames chatMessages
-      `andThen` (\userNames ->
-      composeLogLines userNames chatMessages)))
+      `andThen` \userNames ->
+      composeLogLines userNames chatMessages
       `andThen`
       Signal.send mb.address)
     <~ (Time.every <| 3 * second)

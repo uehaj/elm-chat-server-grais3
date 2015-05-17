@@ -40,10 +40,10 @@ ext {
     gradleWrapperVersion = project.gradleWrapperVersion
 }
 
-assets {
-    minifyJs = true
-    minifyCss = true
-}
+// assets {
+//     minifyJs = true
+//     minifyCss = true
+// }
 
 // node {
 //     version = '0.12.2'

@@ -63,9 +63,9 @@ setup =
 
 messageLog : List (String, String) -> Html
 messageLog msgs =
-    let toTable = List.map (\(name, msg) -> tr[][td [][text name], td [][text msg]] )
+    let toTable = List.map (\(name, msg) -> tr[][td [ "width" :~ "15%" ][text name], td [ "width" :~ "75%" ][text msg]] )
     in table [ "width" :~ "100%" ]
-        [ thead [] [ tr [][ th [ "width" :~ "10"][ text "name" ], th [][] ] ]
+        [ thead [] []
         , tbody [] <| toTable msgs
         ]
 
@@ -77,25 +77,24 @@ view address1 address2 name message msgs =
              [ h1 [] [ text "Welcome to the Chat Room!" ] ]
        , row_
          [ colXs_ 8
-            [ Html.form [ "class" :~ "inline"]
-                        [ input [ value name
-                                , "placeholder" :~ "your name"
-                                , "size" :~ "8"
-                                , on "input" targetValue (\x->Signal.message address1 x) ] []
-                        , input [ value message
-                                , "placeholder" :~ "something to say"
-                                , "size" :~ "40"
-                                , on "input" targetValue (\x->Signal.message address2 x) ] []
-                        , button [ "class" :~ "btn btn-primary"
-                                 , on "click"
-                                   targetValue
-                                   (\x->Signal.message mbSubmitButtonClicked.address (name, message))  ] [ text "abc" ]
-                        ]
-            ]
+            [ div []
+              [ input [ value name
+                      , "placeholder" :~ "your name"
+                      , "size" :~ "20"
+                      , on "input" targetValue (Signal.message address1) ] []
+              , input [ value message
+                      , "placeholder" :~ "something to say"
+                      , "size" :~ "40"
+                      , on "input" targetValue (Signal.message address2) ] []
+              , button [ "class" :~ "btn btn-primary"
+                       , on "click"
+                         targetValue
+                         (\_->Signal.message mbSubmitButtonClicked.address (name, message))  ] [ text "abc" ]
+              ]
             , messageLog msgs
-         , colXs_ 4 [ h3 [] [ text "Users" ] ]
-         ]
-       ])
+            ]
+         ,  colXs_ 4 [ h3 [] [ text "Users" ] ]
+       ]])
 
 main : Signal Html
 main =
@@ -110,28 +109,18 @@ main =
 Tasks for Chat API Call
 =============================
 -}
-authorDecoder = Json.object1 identity ("id" := Json.int)
-messageDecoder = Json.object2 (,) ("author" := authorDecoder) ("message" := string)
+messageDecoder = Json.object2 (,) ("name" := string) ("message" := string)
 
-getChatMessages : Task Http.Error (List (Int, String))
+getChatMessages : Task Http.Error (List (String, String))
 getChatMessages =
     let
       messagesDecoder = Json.list messageDecoder
     in
       Http.get messagesDecoder ("/api/messages.json")
 
-getUserNames : List (Int, String) -> Task Http.Error (List String)
-getUserNames userNames =
-    let
-      userIds = List.map fst userNames
-      userNameDecoder = Json.object1 identity ("name" := string)
-    in
-      List.map (\userId -> (Http.get userNameDecoder ("/api/users/"++toString(userId)++".json"))) userIds
-          |> Task.sequence
-
-composeLogLines : List String -> List (Int, String) -> Task Http.Error (List (String, String))
-composeLogLines userNames msgList =
-    Task.succeed <| zip userNames (List.map snd msgList)
+composeLogLines : List (String, String) -> Task Http.Error (List (String, String))
+composeLogLines msgList =
+    Task.succeed msgList
 
 updateView = Signal.send mbUpdateView.address
 
@@ -139,9 +128,7 @@ fetchChatMessages : Task Http.Error ()
 fetchChatMessages =
     getChatMessages
     `andThen` \chatMessages ->
-    getUserNames chatMessages
-    `andThen` \userNames ->
-    composeLogLines userNames chatMessages
+    composeLogLines chatMessages
     `andThen`
     updateView
 
@@ -149,9 +136,9 @@ port p1 : Signal (Task Http.Error ())
 port p1 = (\_ -> fetchChatMessages) <~ (Time.every <| 3 * second)
 
 composeChatMessage name msg =
-    "{ \"author\":1, \"message\":\""++msg++"\"}"
+    "{ \"name\":\""++name++"\", \"message\":\""++msg++"\"}"
 
-postChatMessage : ChatMessage -> Task Http.Error (Int,String)
+postChatMessage : ChatMessage -> Task Http.Error (String, String)
 postChatMessage (name, msg) =
   let request =
         { verb = "POST"

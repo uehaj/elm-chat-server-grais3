@@ -9671,39 +9671,18 @@ Elm.Main.make = function (_elm) {
    var composeChatMessage = F2(function (name,
    msg) {
       return A2($Basics._op["++"],
-      "{ \"author\":1, \"message\":\"",
+      "{ \"name\":\"",
+      A2($Basics._op["++"],
+      name,
+      A2($Basics._op["++"],
+      "\", \"message\":\"",
       A2($Basics._op["++"],
       msg,
-      "\"}"));
+      "\"}"))));
    });
-   var getUserNames = function (userNames) {
-      return function () {
-         var userNameDecoder = A2($Json$Decode.object1,
-         $Basics.identity,
-         A2($Json$Decode._op[":="],
-         "name",
-         $Json$Decode.string));
-         var userIds = A2($List.map,
-         $Basics.fst,
-         userNames);
-         return $Task.sequence(A2($List.map,
-         function (userId) {
-            return A2($Http.get,
-            userNameDecoder,
-            A2($Basics._op["++"],
-            "/api/users/",
-            A2($Basics._op["++"],
-            $Basics.toString(userId),
-            ".json")));
-         },
-         userIds));
-      }();
+   var composeLogLines = function (msgList) {
+      return $Task.succeed(msgList);
    };
-   var authorDecoder = A2($Json$Decode.object1,
-   $Basics.identity,
-   A2($Json$Decode._op[":="],
-   "id",
-   $Json$Decode.$int));
    var messageDecoder = A3($Json$Decode.object2,
    F2(function (v0,v1) {
       return {ctor: "_Tuple2"
@@ -9711,8 +9690,8 @@ Elm.Main.make = function (_elm) {
              ,_1: v1};
    }),
    A2($Json$Decode._op[":="],
-   "author",
-   authorDecoder),
+   "name",
+   $Json$Decode.string),
    A2($Json$Decode._op[":="],
    "message",
    $Json$Decode.string));
@@ -9743,7 +9722,7 @@ Elm.Main.make = function (_elm) {
                  request));
               }();}
          _U.badCase($moduleName,
-         "between lines 156 and 165");
+         "between lines 143 and 152");
       }();
    };
    var setup = function () {
@@ -9788,14 +9767,6 @@ Elm.Main.make = function (_elm) {
              ,_0: v0
              ,_1: v1};
    }));
-   var composeLogLines = F2(function (userNames,
-   msgList) {
-      return $Task.succeed(A2(zip,
-      userNames,
-      A2($List.map,
-      $Basics.snd,
-      msgList)));
-   });
    _op[":~"] = F2(function (a,b) {
       return A2($Html$Attributes.attribute,
       a,
@@ -9810,13 +9781,17 @@ Elm.Main.make = function (_elm) {
                   return A2($Html.tr,
                     _L.fromArray([]),
                     _L.fromArray([A2($Html.td,
-                                 _L.fromArray([]),
+                                 _L.fromArray([A2(_op[":~"],
+                                 "width",
+                                 "15%")]),
                                  _L.fromArray([$Html.text(_v4._0)]))
                                  ,A2($Html.td,
-                                 _L.fromArray([]),
+                                 _L.fromArray([A2(_op[":~"],
+                                 "width",
+                                 "75%")]),
                                  _L.fromArray([$Html.text(_v4._1)]))]));}
                _U.badCase($moduleName,
-               "on line 66, column 45 to 84");
+               "on line 66, column 45 to 120");
             }();
          });
          return A2($Html.table,
@@ -9825,16 +9800,7 @@ Elm.Main.make = function (_elm) {
          "100%")]),
          _L.fromArray([A2($Html.thead,
                       _L.fromArray([]),
-                      _L.fromArray([A2($Html.tr,
-                      _L.fromArray([]),
-                      _L.fromArray([A2($Html.th,
-                                   _L.fromArray([A2(_op[":~"],
-                                   "width",
-                                   "10")]),
-                                   _L.fromArray([$Html.text("name")]))
-                                   ,A2($Html.th,
-                                   _L.fromArray([]),
-                                   _L.fromArray([]))]))]))
+                      _L.fromArray([]))
                       ,$Html.tbody(_L.fromArray([]))(toTable(msgs))]));
       }();
    };
@@ -9859,60 +9825,52 @@ Elm.Main.make = function (_elm) {
                    _L.fromArray([$Html.text("Welcome to the Chat Room!")]))]))
                    ,$Bootstrap$Html.row_(_L.fromArray([A2($Bootstrap$Html.colXs_,
                                                       8,
-                                                      _L.fromArray([A2($Html.form,
-                                                      _L.fromArray([A2(_op[":~"],
-                                                      "class",
-                                                      "inline")]),
-                                                      _L.fromArray([A2($Html.input,
-                                                                   _L.fromArray([$Html$Attributes.value(name)
-                                                                                ,A2(_op[":~"],
-                                                                                "placeholder",
-                                                                                "your name")
-                                                                                ,A2(_op[":~"],
-                                                                                "size",
-                                                                                "8")
-                                                                                ,A3($Html$Events.on,
-                                                                                "input",
-                                                                                $Html$Events.targetValue,
-                                                                                function (x) {
-                                                                                   return A2($Signal.message,
-                                                                                   address1,
-                                                                                   x);
-                                                                                })]),
-                                                                   _L.fromArray([]))
-                                                                   ,A2($Html.input,
-                                                                   _L.fromArray([$Html$Attributes.value(message)
-                                                                                ,A2(_op[":~"],
-                                                                                "placeholder",
-                                                                                "something to say")
-                                                                                ,A2(_op[":~"],
-                                                                                "size",
-                                                                                "40")
-                                                                                ,A3($Html$Events.on,
-                                                                                "input",
-                                                                                $Html$Events.targetValue,
-                                                                                function (x) {
-                                                                                   return A2($Signal.message,
-                                                                                   address2,
-                                                                                   x);
-                                                                                })]),
-                                                                   _L.fromArray([]))
-                                                                   ,A2($Html.button,
-                                                                   _L.fromArray([A2(_op[":~"],
-                                                                                "class",
-                                                                                "btn btn-primary")
-                                                                                ,A3($Html$Events.on,
-                                                                                "click",
-                                                                                $Html$Events.targetValue,
-                                                                                function (x) {
-                                                                                   return A2($Signal.message,
-                                                                                   mbSubmitButtonClicked.address,
-                                                                                   {ctor: "_Tuple2"
-                                                                                   ,_0: name
-                                                                                   ,_1: message});
-                                                                                })]),
-                                                                   _L.fromArray([$Html.text("abc")]))]))]))
-                                                      ,messageLog(msgs)
+                                                      _L.fromArray([A2($Html.div,
+                                                                   _L.fromArray([]),
+                                                                   _L.fromArray([A2($Html.input,
+                                                                                _L.fromArray([$Html$Attributes.value(name)
+                                                                                             ,A2(_op[":~"],
+                                                                                             "placeholder",
+                                                                                             "your name")
+                                                                                             ,A2(_op[":~"],
+                                                                                             "size",
+                                                                                             "20")
+                                                                                             ,A3($Html$Events.on,
+                                                                                             "input",
+                                                                                             $Html$Events.targetValue,
+                                                                                             $Signal.message(address1))]),
+                                                                                _L.fromArray([]))
+                                                                                ,A2($Html.input,
+                                                                                _L.fromArray([$Html$Attributes.value(message)
+                                                                                             ,A2(_op[":~"],
+                                                                                             "placeholder",
+                                                                                             "something to say")
+                                                                                             ,A2(_op[":~"],
+                                                                                             "size",
+                                                                                             "40")
+                                                                                             ,A3($Html$Events.on,
+                                                                                             "input",
+                                                                                             $Html$Events.targetValue,
+                                                                                             $Signal.message(address2))]),
+                                                                                _L.fromArray([]))
+                                                                                ,A2($Html.button,
+                                                                                _L.fromArray([A2(_op[":~"],
+                                                                                             "class",
+                                                                                             "btn btn-primary")
+                                                                                             ,A3($Html$Events.on,
+                                                                                             "click",
+                                                                                             $Html$Events.targetValue,
+                                                                                             function (_v8) {
+                                                                                                return function () {
+                                                                                                   return A2($Signal.message,
+                                                                                                   mbSubmitButtonClicked.address,
+                                                                                                   {ctor: "_Tuple2"
+                                                                                                   ,_0: name
+                                                                                                   ,_1: message});
+                                                                                                }();
+                                                                                             })]),
+                                                                                _L.fromArray([$Html.text("abc")]))]))
+                                                                   ,messageLog(msgs)]))
                                                       ,A2($Bootstrap$Html.colXs_,
                                                       4,
                                                       _L.fromArray([A2($Html.h3,
@@ -9938,18 +9896,12 @@ Elm.Main.make = function (_elm) {
    getChatMessages,
    function (chatMessages) {
       return A2($Task.andThen,
-      getUserNames(chatMessages),
-      function (userNames) {
-         return A2($Task.andThen,
-         A2(composeLogLines,
-         userNames,
-         chatMessages),
-         updateView);
-      });
+      composeLogLines(chatMessages),
+      updateView);
    });
    var p1 = Elm.Native.Task.make(_elm).performSignal("p1",
    A2($Signal._op["<~"],
-   function (_v8) {
+   function (_v10) {
       return function () {
          return fetchChatMessages;
       }();
@@ -9960,7 +9912,7 @@ Elm.Main.make = function (_elm) {
    function (chatMessage) {
       return A2($Task.andThen,
       postChatMessage(chatMessage),
-      function (_v10) {
+      function (_v12) {
          return function () {
             return fetchChatMessages;
          }();
@@ -9975,10 +9927,8 @@ Elm.Main.make = function (_elm) {
                       ,messageLog: messageLog
                       ,view: view
                       ,main: main
-                      ,authorDecoder: authorDecoder
                       ,messageDecoder: messageDecoder
                       ,getChatMessages: getChatMessages
-                      ,getUserNames: getUserNames
                       ,composeLogLines: composeLogLines
                       ,updateView: updateView
                       ,fetchChatMessages: fetchChatMessages

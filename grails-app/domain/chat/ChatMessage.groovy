@@ -3,11 +3,11 @@ import grails.rest.*
 
 class ChatMessage {
     Date dateCreated
-    User author
+    String name
     String message
 
     static constraints = {
-        author()
+        name()
         message()
     }
 }
